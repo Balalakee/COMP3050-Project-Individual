@@ -1,50 +1,77 @@
 package com.questshaper.game.controller;
 
 import com.questshaper.game.service.GameService;
-import com.questshaper.game.service.MapService;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
-
-@CrossOrigin(origins = {"http://127.0.0.1:5500", "http://localhost:5500"})
 @RestController
-@RequestMapping("/")
+@CrossOrigin(origins = "*")
 public class GameController {
 
     private final GameService gameService;
 
-    public GameController() {
-        MapService mapService = new MapService();
-        this.gameService = new GameService(mapService);
+    public GameController(GameService gameService) {
+        this.gameService = gameService;
     }
 
-    // MOVE endpoint
+    // LOGIN
+    @PostMapping("/login")
+public ResponseEntity<?> login(
+        @RequestParam String username,
+        @RequestParam String password
+) {
+    String sessionId = gameService.login(username, password);
+
+    if (sessionId == null) {
+        return ResponseEntity.status(401).build();
+    }
+
+    Map<String, String> response = new HashMap<>();
+    response.put("session", sessionId);
+
+    return ResponseEntity.ok(response);
+}
+
+    // LOGOUT   
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(@RequestParam String session) {
+    gameService.removeSession(session);
+    return ResponseEntity.ok().build();
+}
+
+    // MOVE
     @GetMapping("/move")
     public ResponseEntity<?> move(
+            @RequestParam String session,
             @RequestParam int dy,
-            @RequestParam int dx,
-            @RequestParam(required = false) String session
+            @RequestParam int dx
     ) {
-        boolean moved = gameService.move(dy, dx);
+        boolean moved = gameService.move(session, dy, dx);
 
         if (!moved) {
-            // 204 = blocked (your frontend expects this)
             return ResponseEntity.status(204).build();
         }
 
-        return ResponseEntity.ok("moved");
+        return ResponseEntity.ok().build();
     }
 
-    // INFO endpoint
+    // INFO
     @GetMapping("/info")
-    public ResponseEntity<Map<String, Object>> info(
+    public ResponseEntity<?> info(
+            @RequestParam String session,
             @RequestParam int y,
-            @RequestParam int x,
-            @RequestParam(required = false) String session
+            @RequestParam int x
     ) {
-        Map<String, Object> result = gameService.getInfo(y, x);
+        var result = gameService.getInfo(session, y, x);
+
+        if (result == null) {
+            return ResponseEntity.status(401).build();
+        }
+
         return ResponseEntity.ok(result);
     }
 }

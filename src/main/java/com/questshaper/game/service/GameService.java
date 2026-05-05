@@ -1,61 +1,103 @@
 package com.questshaper.game.service;
 
-import java.util.*;
+import com.questshaper.game.model.Player;
+import org.springframework.stereotype.Service;
 
+import java.security.MessageDigest;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+@Service
 public class GameService {
 
-    private MapService mapService;
+    private final MapService mapService;
 
-    private int playerX = 5;
-    private int playerY = 5;
-
+    private final Map<String, Player> sessions = new HashMap<>();
+    private Map<String, String> users = new HashMap<>();
     public GameService(MapService mapService) {
         this.mapService = mapService;
     }
 
-    public boolean move(int dy, int dx) {
-        int newY = playerY + dy;
-        int newX = playerX + dx;
+    public void createSession(String sessionId) {
+        sessions.put(sessionId, new Player(5, 5));
+    }
 
-        if (mapService.isBlocked(newY, newX)) {
-            return false;
-        }
+    public void removeSession(String sessionId) {
+        sessions.remove(sessionId);
+    }
 
-        playerY = newY;
-        playerX = newX;
+    private Player getPlayer(String sessionId) {
+        return sessions.get(sessionId);
+    }
+
+    public boolean move(String sessionId, int dy, int dx) {
+        Player player = getPlayer(sessionId);
+        if (player == null) return false;
+
+        int newY = player.getY() + dy;
+        int newX = player.getX() + dx;
+
+        if (mapService.isBlocked(newY, newX)) return false;
+
+        player.setPosition(newY, newX);
         return true;
     }
 
-    public Map<String, Object> getInfo(int y, int x) {
-        int size = 11;
-        int half = size / 2;
+    public Map<String, Object> getInfo(String sessionId, int y, int x) {
+        Player player = getPlayer(sessionId);
+        if (player == null) return null;
 
-        List<List<Character>> window = new ArrayList<>();
+        int viewSize = 11;
+        int half = viewSize / 2;
 
-        for (int row = y - half; row <= y + half; row++) {
-            List<Character> line = new ArrayList<>();
+        int top = player.getY() - half;
+        int left = player.getX() - half;
 
-            for (int col = x - half; col <= x + half; col++) {
-                if (row < 0 || row >= mapService.getHeight()
-                        || col < 0 || col >= mapService.getWidth()) {
-                    line.add(' ');
-                } else {
-                    line.add(mapService.getMap()[row][col]);
-                }
-            }
-
-            window.add(line);
-        }
+        char[][] window = mapService.getWindow(top, left, viewSize);
 
         Map<String, Object> result = new HashMap<>();
-        result.put("x", playerX);
-        result.put("y", playerY);
-        result.put("top", y - half);
-        result.put("left", x - half);
-        result.put("bottom", y + half);
-        result.put("right", x + half);
+        result.put("x", player.getX());
+        result.put("y", player.getY());
+        result.put("top", top);
+        result.put("left", left);
+        result.put("bottom", top + viewSize - 1);
+        result.put("right", left + viewSize - 1);
         result.put("info", window);
 
         return result;
     }
+
+    public String login(String username, String password) {
+
+    // simple user store (for now)
+    users.putIfAbsent(username, hash(password));
+
+    String storedHash = users.get(username);
+
+    if (!storedHash.equals(hash(password))) {
+        return null;
+    }
+
+    String sessionId = UUID.randomUUID().toString();
+    sessions.put(sessionId, new Player(5, 5));
+
+    return sessionId;
+}
+
+private String hash(String password) {
+    try {
+        MessageDigest md = MessageDigest.getInstance("SHA-256");
+        byte[] hash = md.digest(password.getBytes());
+
+        StringBuilder hex = new StringBuilder();
+        for (byte b : hash) {
+            hex.append(String.format("%02x", b));
+        }
+        return hex.toString();
+
+    } catch (Exception e) {
+        throw new RuntimeException(e);
+    }
+}
 }

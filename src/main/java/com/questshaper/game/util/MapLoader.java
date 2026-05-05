@@ -12,23 +12,16 @@ public class MapLoader {
         List<char[]> rows = new ArrayList<>();
 
         try {
-            InputStream is = MapLoader.class
-                    .getClassLoader()
-                    .getResourceAsStream(filename);
-
-            if (is == null) {
-                throw new RuntimeException("Map file not found: " + filename);
-            }
-
+            InputStream is = MapLoader.class.getClassLoader().getResourceAsStream(filename);
             BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-            String line;
 
+            String line;
             while ((line = reader.readLine()) != null) {
                 rows.add(line.toCharArray());
             }
 
         } catch (Exception e) {
-            throw new RuntimeException("Error loading map file", e);
+            e.printStackTrace();
         }
 
         return rows.toArray(new char[0][]);

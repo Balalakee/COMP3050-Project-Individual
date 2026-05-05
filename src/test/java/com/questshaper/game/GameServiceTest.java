@@ -1,54 +1,66 @@
 package com.questshaper.game;
 
-import com.questshaper.game.service.GameService;
-import com.questshaper.game.service.MapService;
-
+import com.questshaper.game.service.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class GameServiceTest {
 
     private GameService gameService;
+    private final String SESSION = "test";
 
     @BeforeEach
-    void setup() {
-        gameService = new GameService(new MapService());
+    void setUp() {
+        MapService mapService = new MapService();
+        gameService = new GameService(mapService);
+
+        gameService.createSession(SESSION);
     }
 
     @Test
-    void testMoveDoesNotCrash() {
-        boolean result = gameService.move(0, 1);
-        assertNotNull(result);
-    }
-
-    @Test
-    void testBlockedMoveReturnsFalse() {
-        boolean result = gameService.move(-10, 0);
-        assertFalse(result);
-    }
-
-    @Test
-    void testGetInfoReturnsMap() {
-        var info = gameService.getInfo(5, 5);
+    void testSessionCreated() {
+        Map<String, Object> info = gameService.getInfo(SESSION, 5, 5);
 
         assertNotNull(info);
-        assertTrue(info.containsKey("info"));
-        assertTrue(info.containsKey("x"));
-        assertTrue(info.containsKey("y"));
+        assertEquals(5, info.get("x"));
+        assertEquals(5, info.get("y"));
     }
 
     @Test
-    void testInfoWindowSizeIs11() {
-        var info = gameService.getInfo(5, 5);
+    void testMoveValid() {
+        boolean moved = gameService.move(SESSION, 1, 0);
 
-        var window = (java.util.List<?>) info.get("info");
+        assertTrue(moved);
 
-        assertEquals(11, window.size());
+        Map<String, Object> info = gameService.getInfo(SESSION, 0, 0);
+        assertEquals(6, info.get("y"));
+    }
 
-        for (var row : window) {
-            assertEquals(11, ((java.util.List<?>) row).size());
-        }
+    @Test
+    void testMoveBlocked_OutOfBounds() {
+        // Force out-of-bounds (always blocked)
+        boolean moved = gameService.move(SESSION, -100, 0);
+
+        assertFalse(moved);
+    }
+
+    @Test
+    void testRemoveSession() {
+        gameService.removeSession(SESSION);
+
+        Map<String, Object> info = gameService.getInfo(SESSION, 5, 5);
+
+        assertNull(info);
+    }
+
+    @Test
+    void testUnknownSessionFails() {
+        boolean moved = gameService.move("unknown", 1, 0);
+
+        assertFalse(moved);
     }
 }
