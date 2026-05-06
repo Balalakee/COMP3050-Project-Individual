@@ -18,13 +18,17 @@ public class GameController {
         this.gameService = gameService;
     }
 
-    // LOGIN
     @PostMapping("/login")
-public ResponseEntity<?> login(
-        @RequestParam String username,
-        @RequestParam String password
-) {
-    String sessionId = gameService.login(username, password);
+    public ResponseEntity<?> login(@RequestBody Map<String, String> body) {
+
+    String name = body.get("name");
+    String encpswrd = body.get("encpswrd");
+
+    if (name == null || encpswrd == null) {
+        return ResponseEntity.badRequest().body("Missing name or encpswrd");
+    }
+
+    String sessionId = gameService.login(name, encpswrd);
 
     if (sessionId == null) {
         return ResponseEntity.status(401).build();
@@ -36,9 +40,10 @@ public ResponseEntity<?> login(
     return ResponseEntity.ok(response);
 }
 
+
     // LOGOUT   
-    @PostMapping("/logout")
-    public ResponseEntity<?> logout(@RequestParam String session) {
+   @GetMapping("/logout")
+public ResponseEntity<?> logout(@RequestParam String session) {
     gameService.removeSession(session);
     return ResponseEntity.ok().build();
 }

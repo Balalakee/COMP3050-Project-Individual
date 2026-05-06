@@ -3,7 +3,6 @@ package com.questshaper.game.service;
 import com.questshaper.game.model.Player;
 import org.springframework.stereotype.Service;
 
-import java.security.MessageDigest;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -68,14 +67,13 @@ public class GameService {
         return result;
     }
 
-    public String login(String username, String password) {
+    public String login(String name, String encpswrd) {
 
-    // simple user store (for now)
-    users.putIfAbsent(username, hash(password));
+    users.putIfAbsent(name, encpswrd);
 
-    String storedHash = users.get(username);
+    String stored = users.get(name);
 
-    if (!storedHash.equals(hash(password))) {
+    if (!stored.equals(encpswrd)) {
         return null;
     }
 
@@ -83,21 +81,5 @@ public class GameService {
     sessions.put(sessionId, new Player(5, 5));
 
     return sessionId;
-}
-
-private String hash(String password) {
-    try {
-        MessageDigest md = MessageDigest.getInstance("SHA-256");
-        byte[] hash = md.digest(password.getBytes());
-
-        StringBuilder hex = new StringBuilder();
-        for (byte b : hash) {
-            hex.append(String.format("%02x", b));
-        }
-        return hex.toString();
-
-    } catch (Exception e) {
-        throw new RuntimeException(e);
-    }
 }
 }
