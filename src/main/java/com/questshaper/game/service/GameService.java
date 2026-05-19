@@ -12,74 +12,107 @@ public class GameService {
 
     private final MapService mapService;
 
+    // username -> encrypted password
+    private final Map<String, String> users = new HashMap<>();
+
+    // sessionId -> player
     private final Map<String, Player> sessions = new HashMap<>();
-    private Map<String, String> users = new HashMap<>();
+
     public GameService(MapService mapService) {
         this.mapService = mapService;
     }
 
-    public void createSession(String sessionId) {
+    public String login(String name, String encpswrd) {
+
+        // Create user if first login
+        users.putIfAbsent(name, encpswrd);
+
+        String storedPassword = users.get(name);
+
+        // Wrong password
+        if (!storedPassword.equals(encpswrd)) {
+            return null;
+        }
+
+        // Create session
+        String sessionId = UUID.randomUUID().toString();
+
         sessions.put(sessionId, new Player(5, 5));
+
+        System.out.println("LOGIN SUCCESS: " + name);
+        System.out.println("SESSION: " + sessionId);
+
+        return sessionId;
     }
 
     public void removeSession(String sessionId) {
         sessions.remove(sessionId);
-    }
 
-    private Player getPlayer(String sessionId) {
-        return sessions.get(sessionId);
+        System.out.println("LOGOUT: " + sessionId);
     }
 
     public boolean move(String sessionId, int dy, int dx) {
-        Player player = getPlayer(sessionId);
-        if (player == null) return false;
+
+        Player player = sessions.get(sessionId);
+
+        if (player == null) {
+            return false;
+        }
 
         int newY = player.getY() + dy;
         int newX = player.getX() + dx;
 
-        if (mapService.isBlocked(newY, newX)) return false;
+        // Horizontal wrapping
+        newX = mapService.normalizeX(newX);
+
+        // Vertical clamping
+        newY = mapService.normalizeY(newY);
+
+        // Collision
+        if (mapService.isBlocked(newY, newX)) {
+            return false;
+        }
 
         player.setPosition(newY, newX);
+
+        System.out.println("MOVE: " + sessionId +
+                " -> (" + newY + ", " + newX + ")");
+
         return true;
     }
 
     public Map<String, Object> getInfo(String sessionId, int y, int x) {
-        Player player = getPlayer(sessionId);
-        if (player == null) return null;
 
-        int viewSize = 11;
-        int half = viewSize / 2;
+    Player player = sessions.get(sessionId);
 
-        int top = player.getY() - half;
-        int left = player.getX() - half;
-
-        char[][] window = mapService.getWindow(top, left, viewSize);
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("x", player.getX());
-        result.put("y", player.getY());
-        result.put("top", top);
-        result.put("left", left);
-        result.put("bottom", top + viewSize - 1);
-        result.put("right", left + viewSize - 1);
-        result.put("info", window);
-
-        return result;
-    }
-
-    public String login(String name, String encpswrd) {
-
-    users.putIfAbsent(name, encpswrd);
-
-    String stored = users.get(name);
-
-    if (!stored.equals(encpswrd)) {
+    if (player == null) {
         return null;
     }
 
-    String sessionId = UUID.randomUUID().toString();
-    sessions.put(sessionId, new Player(5, 5));
+    int size = 11;
 
-    return sessionId;
+    int top = player.getY() - (size / 2);
+    int left = player.getX() - (size / 2);
+
+    char[][] window = mapService.getWindow(top, left, size);
+
+    Map<String, Object> result = new HashMap<>();
+
+    result.put("x", player.getX());
+    result.put("y", player.getY());
+
+    result.put("top", top);
+    result.put("left", left);
+
+    result.put("bottom", top + size - 1);
+    result.put("right", left + size - 1);
+
+    result.put("info", window);
+
+    return result;
 }
+
+    public void createSession(String sessionId) {
+        sessions.put(sessionId, new Player(5, 5));
+    }
 }

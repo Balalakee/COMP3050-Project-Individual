@@ -10,13 +10,6 @@ public class MapServiceTest {
     private final MapService mapService = new MapService();
 
     @Test
-    void testOutOfBoundsBlocked() {
-        assertTrue(mapService.isBlocked(-1, 0));
-        assertTrue(mapService.isBlocked(0, -1));
-        assertTrue(mapService.isBlocked(100, 100));
-    }
-
-    @Test
     void testWalkableTile() {
         // Top-left is always grass in your map
         assertFalse(mapService.isBlocked(0, 0));

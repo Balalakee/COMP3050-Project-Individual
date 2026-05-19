@@ -41,14 +41,6 @@ public class GameServiceTest {
     }
 
     @Test
-    void testMoveBlocked_OutOfBounds() {
-        // Force out-of-bounds (always blocked)
-        boolean moved = gameService.move(SESSION, -100, 0);
-
-        assertFalse(moved);
-    }
-
-    @Test
     void testRemoveSession() {
         gameService.removeSession(SESSION);
 
