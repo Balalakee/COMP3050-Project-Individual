@@ -1,59 +1,60 @@
 package com.questshaper.game.service;
 
 import com.questshaper.game.model.Player;
+import com.questshaper.game.model.tiles.TileStack;
+import com.questshaper.game.util.TileEncoder;
+
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-
+import java.util.*;
 @Service
 public class GameService {
 
     private final MapService mapService;
 
-    // username -> encrypted password
-    private final Map<String, String> users = new HashMap<>();
-
-    // sessionId -> player
+    // session token -> player
     private final Map<String, Player> sessions = new HashMap<>();
 
     public GameService(MapService mapService) {
         this.mapService = mapService;
     }
 
-    public String login(String name, String encpswrd) {
+    public String login(String username, String encpswrd) {
 
-        // Create user if first login
-        users.putIfAbsent(name, encpswrd);
-
-        String storedPassword = users.get(name);
-
-        // Wrong password
-        if (!storedPassword.equals(encpswrd)) {
+        // basic validation
+        if (username == null || username.isBlank()) {
             return null;
         }
 
-        // Create session
-        String sessionId = UUID.randomUUID().toString();
+        if (encpswrd == null || encpswrd.isBlank()) {
+            return null;
+        }
 
-        sessions.put(sessionId, new Player(5, 5));
+        // create player in middle-ish spawn
+        Player player = new Player(5, 5);
 
-        System.out.println("LOGIN SUCCESS: " + name);
-        System.out.println("SESSION: " + sessionId);
+        String session = UUID.randomUUID().toString();
 
-        return sessionId;
+        sessions.put(session, player);
+
+        return session;
     }
 
-    public void removeSession(String sessionId) {
-        sessions.remove(sessionId);
+    public boolean logout(String session) {
 
-        System.out.println("LOGOUT: " + sessionId);
+        if (session == null) {
+            return false;
+        }
+
+        return sessions.remove(session) != null;
     }
 
-    public boolean move(String sessionId, int dy, int dx) {
+    public Player getPlayer(String session) {
+        return sessions.get(session);
+    }
 
-        Player player = sessions.get(sessionId);
+    public boolean movePlayer(String session, int dy, int dx) {
+        Player player = sessions.get(session);
 
         if (player == null) {
             return false;
@@ -62,57 +63,75 @@ public class GameService {
         int newY = player.getY() + dy;
         int newX = player.getX() + dx;
 
-        // Horizontal wrapping
-        newX = mapService.normalizeX(newX);
+        // Wrap x around horizontally
+        int width = mapService.getWidth();
 
-        // Vertical clamping
-        newY = mapService.normalizeY(newY);
+        if (newX < 0) {
+            newX = width - 1;
+        }
 
-        // Collision
+        if (newX >= width) {
+            newX = 0;
+        }
+
+        // Doesn't wrap y
+        if (newY < 0 || newY >= mapService.getHeight()) {
+            return false;
+        }
+
+        // blocked terrain
         if (mapService.isBlocked(newY, newX)) {
             return false;
         }
 
         player.setPosition(newY, newX);
 
-        System.out.println("MOVE: " + sessionId +
-                " -> (" + newY + ", " + newX + ")");
-
         return true;
     }
 
-    public Map<String, Object> getInfo(String sessionId, int y, int x) {
+    public Map<String, Object> getInfo(String session, int y, int x) {
 
-    Player player = sessions.get(sessionId);
+    Player player = sessions.get(session);
+    if (player == null) return null;
 
-    if (player == null) {
+    if (player.getY() != y || player.getX() != x) {
         return null;
     }
 
-    int size = 11;
+    int top = y - 5;
+    int left = x - 5;
 
-    int top = player.getY() - (size / 2);
-    int left = player.getX() - (size / 2);
+    List<List<String>> info = new ArrayList<>();
 
-    char[][] window = mapService.getWindow(top, left, size);
+    for (int row = 0; row < 11; row++) {
 
-    Map<String, Object> result = new HashMap<>();
+        List<String> rowData = new ArrayList<>();
 
-    result.put("x", player.getX());
-    result.put("y", player.getY());
+        int actualY = top + row;
 
-    result.put("top", top);
-    result.put("left", left);
+        for (int col = 0; col < 11; col++) {
 
-    result.put("bottom", top + size - 1);
-    result.put("right", left + size - 1);
+            int actualX = left + col;
 
-    result.put("info", window);
+            TileStack stack = mapService.getStack(actualY, actualX);
 
-    return result;
-}
-
-    public void createSession(String sessionId) {
-        sessions.put(sessionId, new Player(5, 5));
+            rowData.add(TileEncoder.encode(stack));
+            System.out.println("STACK at " + actualY + "," + actualX + " = " + stack);
+System.out.println("ENCODED = " + TileEncoder.encode(stack));
+        }
+        
+        info.add(rowData);
     }
+
+    Map<String, Object> response = new HashMap<>();
+    response.put("y", y);
+    response.put("x", x);
+    response.put("top", top);
+    response.put("left", left);
+    response.put("bottom", top + 10);
+    response.put("right", left + 10);
+    response.put("info", info);
+    
+    return response;
+}
 }

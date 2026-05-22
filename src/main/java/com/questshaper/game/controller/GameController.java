@@ -44,7 +44,7 @@ public class GameController {
     // LOGOUT   
    @GetMapping("/logout")
 public ResponseEntity<?> logout(@RequestParam String session) {
-    gameService.removeSession(session);
+    gameService.logout(session);
     return ResponseEntity.ok().build();
 }
 
@@ -55,7 +55,7 @@ public ResponseEntity<?> logout(@RequestParam String session) {
             @RequestParam int dy,
             @RequestParam int dx
     ) {
-        boolean moved = gameService.move(session, dy, dx);
+        boolean moved = gameService.movePlayer(session, dy, dx);
 
         if (!moved) {
             return ResponseEntity.status(204).build();

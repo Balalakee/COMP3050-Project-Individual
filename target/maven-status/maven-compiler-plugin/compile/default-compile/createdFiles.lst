@@ -1,8 +1,12 @@
-com\questshaper\game\Application.class
+com\questshaper\game\util\TileEncoder.class
 com\questshaper\game\controller\GameController.class
-com\questshaper\game\model\GameMap.class
-com\questshaper\game\service\MapService.class
-com\questshaper\game\model\Position.class
+com\questshaper\game\model\tiles\TileStack.class
 com\questshaper\game\model\Player.class
 com\questshaper\game\service\GameService.class
-com\questshaper\game\util\MapLoader.class
+com\questshaper\game\util\TileDecoder.class
+com\questshaper\game\Application.class
+com\questshaper\game\model\GameMap.class
+com\questshaper\game\model\tiles\Tile.class
+com\questshaper\game\service\MapService.class
+com\questshaper\game\model\tiles\TileLayer.class
+com\questshaper\game\model\tiles\TileType.class

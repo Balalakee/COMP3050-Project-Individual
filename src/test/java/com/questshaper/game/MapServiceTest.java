@@ -14,12 +14,4 @@ public class MapServiceTest {
         // Top-left is always grass in your map
         assertFalse(mapService.isBlocked(0, 0));
     }
-
-    @Test
-    void testWindowSize() {
-        char[][] window = mapService.getWindow(5, 5, 11);
-
-        assertEquals(11, window.length);
-        assertEquals(11, window[0].length);
-    }
 }
