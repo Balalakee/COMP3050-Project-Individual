@@ -94,7 +94,7 @@ public class GameService {
     int top = player.getY() - (size / 2);
     int left = player.getX() - (size / 2);
 
-    char[][] window = mapService.getWindow(top, left, size);
+    String[][] window = mapService.getWindow(top, left, size);
 
     Map<String, Object> result = new HashMap<>();
 

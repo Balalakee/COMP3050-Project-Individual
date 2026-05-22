@@ -17,7 +17,7 @@ public class MapServiceTest {
 
     @Test
     void testWindowSize() {
-        char[][] window = mapService.getWindow(5, 5, 11);
+        String[][] window = mapService.getWindow(5, 5, 11);
 
         assertEquals(11, window.length);
         assertEquals(11, window[0].length);

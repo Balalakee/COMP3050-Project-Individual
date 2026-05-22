@@ -8,8 +8,8 @@ import java.util.List;
 
 public class MapLoader {
 
-    public static char[][] loadMap(String filename) {
-        List<char[]> rows = new ArrayList<>();
+    public static String[][] loadMap(String filename) {
+        List<String[]> rows = new ArrayList<>();
 
         try {
             InputStream is = MapLoader.class.getClassLoader().getResourceAsStream(filename);
@@ -17,13 +17,15 @@ public class MapLoader {
 
             String line;
             while ((line = reader.readLine()) != null) {
-                rows.add(line.toCharArray());
+                // split by one or more spaces (safer than single space)
+                String[] tokens = line.trim().split("\\s+");
+                rows.add(tokens);
             }
 
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        return rows.toArray(new char[0][]);
+        return rows.toArray(new String[0][]);
     }
 }

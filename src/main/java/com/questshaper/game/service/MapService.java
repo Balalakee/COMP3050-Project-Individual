@@ -2,6 +2,7 @@ package com.questshaper.game.service;
 
 import com.questshaper.game.util.MapLoader;
 
+import java.io.StringBufferInputStream;
 import java.util.Arrays;
 
 import org.springframework.stereotype.Service;
@@ -9,7 +10,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class MapService {
 
-    private final char[][] map;
+    private final String[][] map;
 
     public MapService() {
         this.map = MapLoader.loadMap("map.txt");
@@ -55,17 +56,17 @@ public class MapService {
         x = wrapX(x);
         y = clampY(y);
 
-        char tile = map[y][x];
+        String tile = map[y][x];
 
         return switch (tile) {
-            case 'W', 'S', 'B', 'D' -> true;
+            case "W", "S", "B", "D" -> true;
             default -> false;
         };
     }
 
-   public char[][] getWindow(int top, int left, int size) {
+   public String[][] getWindow(int top, int left, int size) {
 
-    char[][] window = new char[size][size];
+    String[][] window = new String[size][size];
 
     int width = getWidth();
 
@@ -82,14 +83,14 @@ public class MapService {
 
             // Vertical bounds are clamped
             if (mapY < 0 || mapY >= getHeight()) {
-                window[y][x] = ' ';
+                window[y][x] = " ";
                 continue;
             }
 
             window[y][x] = map[mapY][wrappedX];
         }
     }
-    for (char[] row : window) {
+    for (String[] row : window) {
     System.out.println(Arrays.toString(row));
 }
     return window;
