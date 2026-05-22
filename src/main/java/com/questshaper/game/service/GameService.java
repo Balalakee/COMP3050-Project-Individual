@@ -2,6 +2,8 @@ package com.questshaper.game.service;
 
 import com.questshaper.game.model.Player;
 import org.springframework.stereotype.Service;
+import com.questshaper.game.model.GameMap;
+import com.questshaper.game.util.TileEncoder;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -59,14 +61,26 @@ public class GameService {
             return false;
         }
 
+        
         int newY = player.getY() + dy;
         int newX = player.getX() + dx;
 
-        // Horizontal wrapping
-        newX = mapService.normalizeX(newX);
+        // WRAP X ONLY
+        int width = mapService.getWidth();
 
-        // Vertical clamping
-        newY = mapService.normalizeY(newY);
+        if (newX < 0) {
+            newX = width - 1;
+        }
+
+        if (newX >= width) {
+            newX = 0;
+        }
+
+        // Y DOES NOT WRAP
+        if (newY < 0 || newY >= mapService.getHeight()) {
+            return false;
+        }
+
 
         // Collision
         if (mapService.isBlocked(newY, newX)) {
@@ -89,12 +103,20 @@ public class GameService {
         return null;
     }
 
-    int size = 11;
+    if (player.getY() != y || player.getX() != x) {
+        return null;
+    }
 
-    int top = player.getY() - (size / 2);
-    int left = player.getX() - (size / 2);
+        int size = 11;
 
-    String[][] window = mapService.getWindow(top, left, size);
+        int top = y - 5;
+        int bottom = y + 5;
+        int left = x - 5;
+        int right = x + 5;
+
+        
+
+    String[][] mapData = mapService.getWindow(y, x, size);
 
     Map<String, Object> result = new HashMap<>();
 
@@ -104,10 +126,10 @@ public class GameService {
     result.put("top", top);
     result.put("left", left);
 
-    result.put("bottom", top + size - 1);
-    result.put("right", left + size - 1);
+    result.put("bottom", bottom);
+    result.put("right", right);
 
-    result.put("info", window);
+    result.put("info", mapData);
 
     return result;
 }

@@ -1,98 +1,87 @@
 package com.questshaper.game.service;
 
+import com.questshaper.game.model.GameMap;
+import com.questshaper.game.model.tiles.TileStack;
 import com.questshaper.game.util.MapLoader;
-
-import java.io.StringBufferInputStream;
-import java.util.Arrays;
+import com.questshaper.game.util.TileEncoder;
 
 import org.springframework.stereotype.Service;
 
 @Service
 public class MapService {
 
-    private final String[][] map;
+    private final GameMap map;
 
     public MapService() {
-        this.map = MapLoader.loadMap("map.txt");
+        String[][] mapData = MapLoader.loadMap("map.txt");
+        GameMap updateMap = new GameMap(mapData.length, mapData[0].length);
+        updateMap.createMap(mapData);
+        this.map = updateMap;
     }
 
-    public int getHeight() {
-        return map.length;
-    }
-
-    public int getWidth() {
-        return map[0].length;
-    }
-
-    private int wrapX(int x) {
+    public String[][] getArrayFromMapData() {
+        int height = getHeight();
         int width = getWidth();
+        String[][] encoded = new String[height][width];
 
-        return ((x % width) + width) % width;
-    }
-
-    private int clampY(int y) {
-
-        if (y < 0) {
-            return 0;
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                encoded[y][x] = TileEncoder.encode(getStack(y, x));
+            }
         }
 
-        if (y >= getHeight()) {
-            return getHeight() - 1;
-        }
-
-        return y;
+        return encoded;
     }
 
-    public int normalizeX(int x) {
-        return wrapX(x);
-    }
-
-    public int normalizeY(int y) {
-        return clampY(y);
-    }
-
-    public boolean isBlocked(int y, int x) {
-
-        x = wrapX(x);
-        y = clampY(y);
-
-        String tile = map[y][x];
-
-        return switch (tile) {
-            case "W", "S", "B", "D" -> true;
-            default -> false;
-        };
-    }
-
-   public String[][] getWindow(int top, int left, int size) {
+    public String[][] getWindow(int centerY, int centerX, int size) {
 
     String[][] window = new String[size][size];
 
-    int width = getWidth();
+    int half = size / 2;
 
-    for (int y = 0; y < size; y++) {
+    for (int dy = 0; dy < size; dy++) {
 
-        int mapY = top + y;
+        for (int dx = 0; dx < size; dx++) {
 
-        for (int x = 0; x < size; x++) {
+            int y = centerY - half + dy;
+            int x = centerX - half + dx;
 
-            int rawX = left + x;
-            System.out.println("TOP=" + top + " LEFT=" + left);
-            // ONLY wrap when reading actual map
-            int wrappedX = ((rawX % width) + width) % width;
+            // X Wraps
+            if (x < 0) {
+                x += getWidth();
+            }
 
-            // Vertical bounds are clamped
-            if (mapY < 0 || mapY >= getHeight()) {
-                window[y][x] = " ";
+            if (x >= getWidth()) {
+                x -= getWidth();
+            }
+
+            // Y Does not wrap
+            if (y < 0 || y >= getHeight()) {
+                window[dy][dx] = " ";
                 continue;
             }
 
-            window[y][x] = map[mapY][wrappedX];
+            window[dy][dx] = TileEncoder.encode(getStack(y, x));
         }
     }
-    for (String[] row : window) {
-    System.out.println(Arrays.toString(row));
-}
+
     return window;
 }
+
+    public int getHeight() {
+        return map.getHeight();
+    }
+
+    public int getWidth() {
+        return map.getWidth();
+    }
+
+    public boolean isBlocked(int y, int x) {
+        TileStack stack = getStack(y, x);
+        return stack != null && stack.isBlockingStack();
+    }
+
+   public TileStack getStack(int y, int x) {
+        return map.getStack(y, x);
+    }
 }
