@@ -15,12 +15,50 @@ public class TileStack {
         return layers;
     }
 
-    public boolean isBlockingStack() {
+    public Tile getByLayer(TileLayer layer) {
         for (Tile t : layers) {
-            if (t.isBlockingTile()) {
-                return true;
-            }
+            if (t.getLayer() == layer) return t;
         }
-        return false;
+        return null;
     }
+
+    public boolean isBlockingStack() {
+
+    Tile structure = null;
+    Tile floor = null;
+
+    for (Tile t : layers) {
+
+        if (t.getLayer() ==
+            TileLayer.STRUCTURE) {
+
+            structure = t;
+        }
+
+        if (t.getLayer() ==
+            TileLayer.FLOOR) {
+
+            floor = t;
+        }
+    }
+
+    // structures override floor
+
+    if (structure != null) {
+        return structure.isBlockingTile();
+    }
+
+    return floor != null &&
+           floor.isBlockingTile();
+}
+    public TileStack copy() {
+
+    TileStack clone = new TileStack();
+
+    for (Tile tile : layers) {
+        clone.add(tile);
+    }
+
+    return clone;
+}
 }

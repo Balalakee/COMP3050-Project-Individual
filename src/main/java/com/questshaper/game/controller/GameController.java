@@ -28,7 +28,7 @@ public class GameController {
         return ResponseEntity.badRequest().body("Missing name or encpswrd");
     }
 
-    String sessionId = gameService.login(name, encpswrd);
+    String sessionId = gameService.createSession(name);
 
     if (sessionId == null) {
         return ResponseEntity.status(401).build();
@@ -44,7 +44,7 @@ public class GameController {
     // LOGOUT   
    @GetMapping("/logout")
 public ResponseEntity<?> logout(@RequestParam String session) {
-    gameService.removeSession(session);
+    gameService.logout(session);
     return ResponseEntity.ok().build();
 }
 

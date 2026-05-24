@@ -6,22 +6,48 @@ public class TileEncoder {
 
     public static String encode(TileStack stack) {
 
-        if (stack == null || stack.getLayers().isEmpty()) {
-        return "g"; // fallback instead of empty/black
-    }
-
-        Tile base = null;
-        Tile overlay = null;
-
-        for (Tile t : stack.getLayers()) {
-            if (t.getLayer() == TileLayer.FLOOR) base = t;
-            if (t.getLayer() == TileLayer.STRUCTURE) overlay = t;
+        if (stack == null ||
+            stack.getLayers().isEmpty()) {
+            return "g";
         }
 
-        StringBuilder sb = new StringBuilder();
+        Tile floor = null;
+        Tile structure = null;
+        Tile item = null;
+        Tile character = null;
 
-        if (base != null) sb.append(base.getType().code);
-        if (overlay != null) sb.append(overlay.getType().code);
+        for (Tile t : stack.getLayers()) {
+
+            switch (t.getLayer()) {
+
+                case FLOOR ->
+                        floor = t;
+
+                case STRUCTURE ->
+                        structure = t;
+
+                case ITEM ->
+                        item = t;
+
+                case CHARACTER ->
+                        character = t;
+            }
+        }
+
+        StringBuilder sb =
+                new StringBuilder();
+
+        if (floor != null)
+            sb.append(floor.getType().code);
+
+        if (structure != null)
+            sb.append(structure.getType().code);
+
+        if (item != null)
+            sb.append(item.getType().code);
+
+        if (character != null)
+            sb.append(character.getType().code);
 
         return sb.toString();
     }

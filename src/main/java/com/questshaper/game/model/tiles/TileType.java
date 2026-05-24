@@ -25,6 +25,23 @@ public enum TileType {
     DOOR_OPEN('d', false),
     BRIDGE('b', false),
 
+    // Items
+    AXE('a', false),
+    CYAN_POTION('c', false),
+    HEART_POTION('h', false),
+    KEY('k', false),
+
+    PLAYER_0('0', true), // '0' to '9' for players 1 to 10
+    PLAYER_1('1', true),
+    PLAYER_2('2', true),
+    PLAYER_3('3', true),
+    PLAYER_4('4', true),
+    PLAYER_5('5', true),
+    PLAYER_6('6', true),
+    PLAYER_7('7', true),
+    PLAYER_8('8', true),
+    PLAYER_9('9', true),
+
     UNKNOWN(' ', true);
 
     public final char code;

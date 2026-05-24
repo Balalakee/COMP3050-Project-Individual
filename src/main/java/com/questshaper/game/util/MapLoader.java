@@ -1,29 +1,25 @@
 package com.questshaper.game.util;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.*;
+import java.util.*;
 
 public class MapLoader {
 
     public static String[][] loadMap(String filename) {
+
         List<String[]> rows = new ArrayList<>();
 
-        try {
-            InputStream is = MapLoader.class.getClassLoader().getResourceAsStream(filename);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+        try (InputStream is = MapLoader.class.getClassLoader().getResourceAsStream(filename);
+             BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
 
             String line;
-            while ((line = reader.readLine()) != null) {
-                // split by one or more spaces (safer than single space)
-                String[] tokens = line.trim().split("\\s+");
-                rows.add(tokens);
+
+            while ((line = br.readLine()) != null) {
+                rows.add(line.trim().split("\\s+"));
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new RuntimeException("Failed to load map", e);
         }
 
         return rows.toArray(new String[0][]);
