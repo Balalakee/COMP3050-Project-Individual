@@ -7,10 +7,10 @@
 
     <!-- Spring Boot Parent -->
     <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.5</version>
-        <relativePath/>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.3.8</version> <!-- or latest 3.3.x available -->
+    <relativePath/>
     </parent>
 
     <groupId>com.questshaper</groupId>
