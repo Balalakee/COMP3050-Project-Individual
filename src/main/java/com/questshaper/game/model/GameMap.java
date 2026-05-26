@@ -36,10 +36,11 @@ public class GameMap {
     }
 
     public TileStack getStack(int y, int x) {
+        if (x < 0 || x >= getWidth() || y < 0 || y >= getHeight()) {
+            return null;
+        }
         return grid[y][x];
     }
-
-    // ---------------- SAFE ACCESS (IMPORTANT FIX) ----------------
 
     public TileStack getStackSafe(int y, int x) {
 

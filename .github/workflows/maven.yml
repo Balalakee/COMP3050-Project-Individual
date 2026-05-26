@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Get your code
+      # 1. Get code
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -25,6 +25,6 @@ jobs:
       - name: Build and test with Maven
         run: mvn clean test
 
-      # 4. Build Docker image (optional but good for marks)
+      # 4. Build Docker image 
       - name: Build Docker image
         run: docker build -t questshaper .

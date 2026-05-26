@@ -22,6 +22,10 @@ public class TileStack {
         return null;
     }
 
+    public void removeLayer(TileLayer layer) {
+    layers.removeIf(t -> t.getLayer() == layer);
+}
+
     public boolean isBlockingStack() {
 
     Tile structure = null;

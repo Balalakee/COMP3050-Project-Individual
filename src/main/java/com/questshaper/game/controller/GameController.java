@@ -1,7 +1,8 @@
 package com.questshaper.game.controller;
 
 import com.questshaper.game.service.GameService;
-
+import com.questshaper.game.model.Player;
+import com.questshaper.game.model.LoginResponse;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,20 +25,24 @@ public class GameController {
     String name = body.get("name");
     String encpswrd = body.get("encpswrd");
 
-    if (name == null || encpswrd == null) {
+    if (name == null || encpswrd == null || name.isBlank() || encpswrd.isBlank()) {
         return ResponseEntity.badRequest().body("Missing name or encpswrd");
     }
 
-    String sessionId = gameService.createSession(name);
+    String sessionId = gameService.login(name, encpswrd);
 
     if (sessionId == null) {
-        return ResponseEntity.status(401).build();
+        return ResponseEntity.status(401).body("Server Full");
     }
 
-    Map<String, String> response = new HashMap<>();
-    response.put("session", sessionId);
+    Player player = gameService.getPlayer(sessionId);
 
-    return ResponseEntity.ok(response);
+    return ResponseEntity.ok(
+            Map.of(
+                    "session", sessionId,
+                    "x", player.getX(),
+                    "y", player.getY()
+            ));
 }
 
 
@@ -79,4 +84,45 @@ public ResponseEntity<?> logout(@RequestParam String session) {
 
         return ResponseEntity.ok(result);
     }
+
+    @GetMapping("/take")
+public ResponseEntity<?> take(
+        @RequestParam String session) {
+
+    if (!gameService.isValidSession(session)) {
+        return ResponseEntity.status(401).build();
+    }
+
+    return gameService.take(session)
+            ? ResponseEntity.ok().build()
+            : ResponseEntity.noContent().build();
+}
+
+@GetMapping("/use")
+public ResponseEntity<?> use(
+        @RequestParam String session,
+        @RequestParam(defaultValue="0") int dy,
+        @RequestParam(defaultValue="0") int dx) {
+
+    if (!gameService.isValidSession(session)) {
+        return ResponseEntity.status(401).build();
+    }
+
+    return gameService.use(session, dy, dx)
+            ? ResponseEntity.ok().build()
+            : ResponseEntity.noContent().build();
+}
+
+@GetMapping("/place")
+public ResponseEntity<?> place(
+        @RequestParam String session) {
+
+    if (!gameService.isValidSession(session)) {
+        return ResponseEntity.status(401).build();
+    }
+
+    return gameService.place(session)
+            ? ResponseEntity.ok().build()
+            : ResponseEntity.noContent().build();
+}
 }

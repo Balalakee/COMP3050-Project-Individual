@@ -1,59 +1,214 @@
 package com.questshaper.game;
 
+
 import com.questshaper.game.service.*;
-import com.questshaper.game.model.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Map;
-
 import static org.junit.jupiter.api.Assertions.*;
 
-public class GameServiceTest {
+class GameServiceTest {
 
-    /*private GameService gameService;
-    private final String SESSION = "test";
+    private GameService gameService;
 
     @BeforeEach
-    void setUp() {
-        MapService mapService = new MapService();
-        gameService = new GameService(mapService);
-
-        gameService.login(SESSION, SESSION);
+    void setup() {
+        gameService =
+                new GameService(
+                        new MapService()
+                );
     }
 
     @Test
-    void testSessionCreated() {
-        Map<String, Object> info = gameService.getInfo(SESSION, 5, 5);
+    void validLoginCreatesSession() {
+
+        String session =
+                gameService.login(
+                        "Bob",
+                        "hash123"
+                );
+
+        assertNotNull(session);
+    }
+
+    @Test
+    void sessionExistsAfterLogin() {
+
+        String session =
+                gameService.login(
+                        "Bob",
+                        "hash123"
+                );
+
+        assertTrue(
+                gameService.isValidSession(
+                        session
+                )
+        );
+    }
+
+    @Test
+    void logoutRemovesSession() {
+
+        String session =
+                gameService.login(
+                        "Bob",
+                        "hash123"
+                );
+
+        gameService.logout(session);
+
+        assertFalse(
+                gameService.isValidSession(
+                        session
+                )
+        );
+    }
+
+    @Test
+    void moveEastSucceeds() {
+
+        String s =
+                gameService.login(
+                        "Bob",
+                        "hash"
+                );
+
+        assertTrue(
+                gameService.move(s,0,1)
+        );
+    }
+
+    @Test
+    void diagonalMoveFails() {
+
+        String s =
+                gameService.login(
+                        "Bob",
+                        "hash"
+                );
+
+        assertFalse(
+                gameService.move(s,1,1)
+        );
+    }
+
+    @Test
+    void moveTooFarFails() {
+
+        String s =
+                gameService.login(
+                        "Bob",
+                        "hash"
+                );
+
+        assertFalse(
+                gameService.move(s,2,0)
+        );
+    }
+
+    @Test
+    void blockedMoveFails() {
+
+        String s =
+                gameService.login(
+                        "Bob",
+                        "hash"
+                );
+
+        assertFalse(
+                gameService.move(s,-1,0)
+        );
+    }
+
+    @Test
+    void invalidSessionMoveFails() {
+
+        assertFalse(
+                gameService.move(
+                        "bad",
+                        0,
+                        1
+                )
+        );
+    }
+
+    @Test
+    void infoInvalidSessionReturnsNull() {
+
+        assertNull(
+                gameService.getInfo(
+                        "bad",
+                        5,
+                        5
+                )
+        );
+    }
+
+    @Test
+    void infoCorrectSessionWorks() {
+
+        String s =
+                gameService.login(
+                        "Bob",
+                        "hash"
+                );
+
+        var info =
+                gameService.getInfo(
+                        s,
+                        5,
+                        5
+                );
 
         assertNotNull(info);
-        assertEquals(5, info.get("x"));
-        assertEquals(5, info.get("y"));
     }
 
-    @Test
-    void testMoveValid() {
-        boolean moved = gameService.move(SESSION, 1, 0);
-
-        assertTrue(moved);
-
-        Map<String, Object> info = gameService.getInfo(SESSION, 0, 0);
-        assertEquals(6, info.get("y"));
-    }
 
     @Test
-    void testRemoveSession() {
-        gameService.logout(SESSION);
+void avatarAssigned() {
 
-        Map<String, Object> info = gameService.getInfo(SESSION, 5, 5);
+    String s =
+            gameService.login(
+                    "Bob",
+                    "hash"
+            );
 
-        assertNull(info);
-    }
+    char avatar =
+            gameService
+                    .getPlayer(s)
+                    .getAvatar();
 
-    @Test
-    void testUnknownSessionFails() {
-        boolean moved = gameService.move("unknown", 1, 0);
+    assertTrue(
+            avatar >= '0'
+            && avatar <= '9'
+    );
+}
 
-        assertFalse(moved);
-    }*/
+@Test
+void avatarsAreUnique() {
+
+    String s1 =
+            gameService.login(
+                    "A",
+                    "1"
+            );
+
+    String s2 =
+            gameService.login(
+                    "B",
+                    "2"
+            );
+
+    char a1 =
+            gameService.getPlayer(s1)
+                    .getAvatar();
+
+    char a2 =
+            gameService.getPlayer(s2)
+                    .getAvatar();
+
+    assertNotEquals(a1,a2);
+}
+
 }

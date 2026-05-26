@@ -87,6 +87,8 @@ public class TileDecoder {
                     new Tile(
                             TileType.WOODEN_BOARDS,
                             TileLayer.FLOOR));
+
+                
         }
 
         // remaining chars = overlays/items
@@ -135,6 +137,11 @@ public class TileDecoder {
                         new Tile(
                                 TileType.KEY,
                                 TileLayer.ITEM));
+                
+                // characters
+
+                case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' ->
+                stack.add(new Tile(TileType.fromChar(c), TileLayer.CHARACTER));
             }
         }
 

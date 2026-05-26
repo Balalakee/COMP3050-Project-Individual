@@ -5,7 +5,7 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <!-- Spring Boot Parent (VERY IMPORTANT) -->
+    <!-- Spring Boot Parent -->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -23,10 +23,9 @@
         <java.version>17</java.version>
     </properties>
 
-    <!-- ✅ Dependencies -->
     <dependencies>
 
-        <!-- Spring Boot Web (for /move and /info endpoints) -->
+        <!-- Spring Boot Web (for endpoints) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -41,11 +40,9 @@
 
     </dependencies>
 
-    <!-- ✅ Build section (THIS FIXES YOUR ERROR) -->
     <build>
         <plugins>
 
-            <!-- Spring Boot Plugin -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
