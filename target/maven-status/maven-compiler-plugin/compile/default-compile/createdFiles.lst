@@ -1,8 +1,0 @@
-com\questshaper\game\Application.class
-com\questshaper\game\controller\GameController.class
-com\questshaper\game\model\GameMap.class
-com\questshaper\game\service\MapService.class
-com\questshaper\game\model\Position.class
-com\questshaper\game\model\Player.class
-com\questshaper\game\service\GameService.class
-com\questshaper\game\util\MapLoader.class
