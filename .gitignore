@@ -12,3 +12,10 @@ infra/terraform.tfstate.backup
 .DS_Store
 .idea/
 .vscode/
+
+# Private keys / certificates
+AWS/
+*.pem
+*.key
+*.p12
+*.crt

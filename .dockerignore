@@ -46,3 +46,10 @@ node_modules/
 # Docker compose override files
 
 docker-compose.override.yml
+
+# Private keys / certificates
+AWS/
+*.pem
+*.key
+*.p12
+*.crt

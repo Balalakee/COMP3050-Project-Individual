@@ -1,127 +1,358 @@
-// src/test/java/com/questshaper/game/service/MultiplayerTest.java
-
 package com.questshaper.game.service;
 
 import com.questshaper.game.model.Player;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class MultiplayerTest {
 
-    private static final String ADMIN_HASH =
-            "abc26589a512186b8947f4c14bb18906a588a9d44b4da1e1bd1fe1a04d5023c4";
+    @Test
+    void twoPlayersCanLoginWithDifferentSessions() throws Exception {
 
-    private static final String WILLOW_HASH =
-            "37f8fd23338f899ed3d0a4a443fb8bf50369ca762440cb6b2313c17b6a7be16b";
+        GameService gameService =
+                new GameService();
 
-    private static final String ENV_CONTENT =
-            "GAME_USERS=admin:" + ADMIN_HASH + ":1:5:5;" +
-            "willow:" + WILLOW_HASH + ":2:5:6";
+        List<TestUser> users =
+                configuredUsers();
 
-    private String previousEnvFile;
-    private boolean hadEnvFile;
+        TestUser user1 =
+                users.get(0);
 
-    private GameService gameService;
+        TestUser user2 =
+                users.get(1);
 
-    @BeforeEach
-    void setup() throws Exception {
-        backupAndWriteEnvFile();
-        gameService = new GameService();
-    }
+        String session1 =
+                gameService.login(
+                        user1.username(),
+                        user1.hash()
+                );
 
-    @AfterEach
-    void cleanup() throws Exception {
-        restoreEnvFile();
+        String session2 =
+                gameService.login(
+                        user2.username(),
+                        user2.hash()
+                );
+
+        assertNotNull(session1);
+        assertNotNull(session2);
+
+        assertNotEquals(
+                session1,
+                session2
+        );
     }
 
     @Test
-    void twoPlayersCanLoginWithDifferentSessions() {
-        String adminSession = gameService.login("admin", ADMIN_HASH);
-        String willowSession = gameService.login("willow", WILLOW_HASH);
+    void duplicateLoginForSameAccountFailsWhileOnline() throws Exception {
 
-        assertNotNull(adminSession);
-        assertNotNull(willowSession);
-        assertNotEquals(adminSession, willowSession);
-    }
+        GameService gameService =
+                new GameService();
 
-    @Test
-    void duplicateLoginForSameAccountFailsWhileOnline() {
-        String firstSession = gameService.login("admin", ADMIN_HASH);
-        String secondSession = gameService.login("admin", ADMIN_HASH);
+        TestUser user =
+                configuredUsers().get(0);
+
+        String firstSession =
+                gameService.login(
+                        user.username(),
+                        user.hash()
+                );
+
+        String secondSession =
+                gameService.login(
+                        user.username(),
+                        user.hash()
+                );
 
         assertNotNull(firstSession);
+
         assertNull(secondSession);
     }
 
     @Test
-    void sameAccountCanLoginAgainAfterLogout() {
-        String firstSession = gameService.login("admin", ADMIN_HASH);
+    void sameAccountCanLoginAgainAfterLogout() throws Exception {
 
-        assertTrue(gameService.logout(firstSession));
+        GameService gameService =
+                new GameService();
 
-        String secondSession = gameService.login("admin", ADMIN_HASH);
+        TestUser user =
+                configuredUsers().get(0);
+
+        String firstSession =
+                gameService.login(
+                        user.username(),
+                        user.hash()
+                );
+
+        assertNotNull(firstSession);
+
+        assertTrue(
+                gameService.logout(firstSession)
+        );
+
+        String secondSession =
+                gameService.login(
+                        user.username(),
+                        user.hash()
+                );
 
         assertNotNull(secondSession);
     }
 
     @Test
-    void playersHaveDifferentAvatars() {
-        String adminSession = gameService.login("admin", ADMIN_HASH);
-        String willowSession = gameService.login("willow", WILLOW_HASH);
+    void playersHaveDifferentAvatars() throws Exception {
 
-        Player admin = gameService.getPlayer(adminSession);
-        Player willow = gameService.getPlayer(willowSession);
+        GameService gameService =
+                new GameService();
 
-        assertNotEquals(admin.getAvatar(), willow.getAvatar());
+        List<TestUser> users =
+                configuredUsers();
+
+        TestUser user1 =
+                users.get(0);
+
+        TestUser user2 =
+                users.get(1);
+
+        String session1 =
+                gameService.login(
+                        user1.username(),
+                        user1.hash()
+                );
+
+        String session2 =
+                gameService.login(
+                        user2.username(),
+                        user2.hash()
+                );
+
+        Player player1 =
+                gameService.getPlayer(session1);
+
+        Player player2 =
+                gameService.getPlayer(session2);
+
+        assertNotNull(player1);
+        assertNotNull(player2);
+
+        assertNotEquals(
+                player1.getAvatar(),
+                player2.getAvatar()
+        );
     }
 
     @Test
-    void infoJsonIncludesBothOnlinePlayersWhenVisible() {
-        String adminSession = gameService.login("admin", ADMIN_HASH);
-        String willowSession = gameService.login("willow", WILLOW_HASH);
+    void infoJsonIncludesBothOnlinePlayersWhenVisible() throws Exception {
 
-        Player admin = gameService.getPlayer(adminSession);
-        Player willow = gameService.getPlayer(willowSession);
+        GameService gameService =
+                new GameService();
 
-        String json = gameService.infoJson(admin, admin.getY(), admin.getX());
+        List<TestUser> users =
+                configuredUsers();
 
-        assertTrue(json.contains(String.valueOf(admin.getAvatar())));
-        assertTrue(json.contains(String.valueOf(willow.getAvatar())));
+        TestUser user1 =
+                users.get(0);
+
+        TestUser user2 =
+                users.get(1);
+
+        String session1 =
+                gameService.login(
+                        user1.username(),
+                        user1.hash()
+                );
+
+        String session2 =
+                gameService.login(
+                        user2.username(),
+                        user2.hash()
+                );
+
+        Player player1 =
+                gameService.getPlayer(session1);
+
+        Player player2 =
+                gameService.getPlayer(session2);
+
+        player2.setPosition(
+                player1.getY(),
+                player1.getX() + 1
+        );
+
+        String json =
+                gameService.infoJson(
+                        player1,
+                        player1.getY(),
+                        player1.getX()
+                );
+
+        assertTrue(
+                json.contains(
+                        String.valueOf(
+                                player1.getAvatar()
+                        )
+                )
+        );
+
+        assertTrue(
+                json.contains(
+                        String.valueOf(
+                                player2.getAvatar()
+                        )
+                )
+        );
     }
 
     @Test
-    void onlinePlayerBlocksMovement() {
-        String adminSession = gameService.login("admin", ADMIN_HASH);
-        String willowSession = gameService.login("willow", WILLOW_HASH);
+    void onlinePlayerBlocksMovement() throws Exception {
 
-        Player admin = gameService.getPlayer(adminSession);
-        Player willow = gameService.getPlayer(willowSession);
+        GameService gameService =
+                new GameService();
 
-        willow.setPosition(admin.getY(), admin.getX() + 1);
+        List<TestUser> users =
+                configuredUsers();
 
-        assertFalse(gameService.move(admin, 0, 1));
+        TestUser user1 =
+                users.get(0);
+
+        TestUser user2 =
+                users.get(1);
+
+        String session1 =
+                gameService.login(
+                        user1.username(),
+                        user1.hash()
+                );
+
+        String session2 =
+                gameService.login(
+                        user2.username(),
+                        user2.hash()
+                );
+
+        Player player1 =
+                gameService.getPlayer(session1);
+
+        Player player2 =
+                gameService.getPlayer(session2);
+
+        player2.setPosition(
+                player1.getY(),
+                player1.getX() + 1
+        );
+
+        assertFalse(
+                gameService.move(
+                        player1,
+                        0,
+                        1
+                )
+        );
     }
 
-    private void backupAndWriteEnvFile() throws Exception {
-        Path envPath = Path.of(".env");
+    private List<TestUser> configuredUsers() {
 
-        hadEnvFile = Files.exists(envPath);
-        previousEnvFile = hadEnvFile ? Files.readString(envPath) : null;
+        String users =
+                loadGameUsers();
 
-        Files.writeString(envPath, ENV_CONTENT);
-    }
+        String[] entries =
+                users.split(";");
 
-    private void restoreEnvFile() throws Exception {
-        Path envPath = Path.of(".env");
+        List<TestUser> result =
+                new ArrayList<>();
 
-        if (hadEnvFile) {
-            Files.writeString(envPath, previousEnvFile);
-        } else {
-            Files.deleteIfExists(envPath);
+        for (String entry : entries) {
+
+            if (entry == null ||
+                entry.isBlank()) {
+                continue;
+            }
+
+            String[] parts =
+                    entry.split(":");
+
+            if (parts.length != 5) {
+                fail(
+                        "Invalid GAME_USERS entry: "
+                        + entry
+                );
+            }
+
+            result.add(
+                    new TestUser(
+                            parts[0],
+                            parts[1]
+                    )
+            );
         }
+
+        if (result.size() < 2) {
+
+            fail(
+                    "At least two users are required in GAME_USERS"
+            );
+        }
+
+        return result;
+    }
+
+    private String loadGameUsers() {
+
+        String users =
+                System.getenv(
+                        "GAME_USERS"
+                );
+
+        if (users != null &&
+            !users.isBlank()) {
+
+            return users;
+        }
+
+        try {
+
+            users =
+                    Files.lines(
+                            Path.of(".env")
+                    )
+                    .filter(
+                            line ->
+                                    line.startsWith(
+                                            "GAME_USERS="
+                                    )
+                    )
+                    .map(
+                            line ->
+                                    line.substring(
+                                            "GAME_USERS=".length()
+                                    )
+                    )
+                    .findFirst()
+                    .orElse("");
+
+        } catch (Exception e) {
+
+            users = "";
+        }
+
+        if (users.isBlank()) {
+
+            fail(
+                    "GAME_USERS must be set in environment or .env for tests"
+            );
+        }
+
+        return users;
+    }
+
+    private record TestUser(
+            String username,
+            String hash
+    ) {
     }
 }

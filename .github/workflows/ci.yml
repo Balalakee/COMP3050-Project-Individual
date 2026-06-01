@@ -2,9 +2,9 @@ name: Java CI
 
 on:
   push:
-    branches: [main, Changed_Code]
+    branches: ['**']
   pull_request:
-    branches: [main, Changed_Code]
+    branches: ['**']
 
 jobs:
   build:
@@ -30,6 +30,10 @@ jobs:
         run: |
           pip3 install semgrep
           semgrep --config semgrep/semgrep.yml src/main/java
+
+      - name: Inject server URL into frontend
+        run: |
+          sed -i "s|__SERVER_URL__|http://${{ secrets.EC2_HOST }}:8000|g" public/index.html
 
       - name: Build Docker image
         run: docker build -t comp3050-assign2 .
