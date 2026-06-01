@@ -56,20 +56,15 @@ jobs:
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER }}
-          EC2_SSH_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           GAME_USERS: ${{ secrets.GAME_USERS }}
         run: |
-          test -n "$EC2_HOST"
-          test -n "$EC2_USER"
-          test -n "$EC2_SSH_PRIVATE_KEY"
-
-          printf '%s\n' "$EC2_SSH_PRIVATE_KEY" > key.pem
+          echo "$EC2_SSH_PRIVATE_KEY" > key.pem
           chmod 600 key.pem
 
-          ssh -o StrictHostKeyChecking=no \
-              -i key.pem \
-              "$EC2_USER@$EC2_HOST" \
-              "cd /opt/questshaper && \
-              printf '%s\n' 'GAME_USERS=${GAME_USERS}' > .env && \
-              docker compose pull && \
-              docker compose up -d --build"
+          ssh -o StrictHostKeyChecking=no -i key.pem ${EC2_USER}@${EC2_HOST} "
+            cd /opt/questshaper &&
+            echo 'GAME_USERS=${GAME_USERS}' > .env &&
+            docker compose pull &&
+            docker compose up -d
+          "
