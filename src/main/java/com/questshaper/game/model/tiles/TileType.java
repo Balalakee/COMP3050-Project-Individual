@@ -2,64 +2,63 @@ package com.questshaper.game.model.tiles;
 
 public enum TileType {
 
-    // ground
-    BRICK_WALL('B', true, false, null),
-    DIRT('_', false, false, null),
-    FLAGSTONES('f', false, false, null),
-    GRASS('g', false, false, null),
-    PEBBLES('p', false, false, null),
+    // floors / ground
+    BRICK_WALL('B', Layer.FLOOR, true),
+    DIRT('_', Layer.FLOOR, false),
+    FLAGSTONES('f', Layer.FLOOR, false),
+    GRASS('g', Layer.FLOOR, false),
+    PEBBLES('p', Layer.FLOOR, false),
 
-    ROCKS_ONE('.', false, false, null),
-    ROCKS_TWO(',', false, false, null),
-    ROCKS_THREE(':', false, false, null),
-    ROCKS_SIX(';', false, false, null),
+    ROCKS_ONE('.', Layer.FLOOR, false),
+    ROCKS_TWO(',', Layer.FLOOR, false),
+    ROCKS_THREE(':', Layer.FLOOR, false),
+    ROCKS_SIX(';', Layer.FLOOR, false),
 
-    STONE_WALL('S', true, false, null),
-    SAND('s', false, false, null),
-    TREE('t', false, false, null),
-    WATER_WAVES('W', true, false, null),
-    WOODEN_BOARDS('w', false, false, null),
+    STONE_WALL('S', Layer.FLOOR, true),
+    SAND('s', Layer.FLOOR, false),
+    TREE('t', Layer.FLOOR, false),
+    WATER_WAVES('W', Layer.FLOOR, true),
+    WOODEN_BOARDS('w', Layer.FLOOR, false),
 
-    // overlays
-    DOOR('D', true, false, null),
-    DOOR_OPEN('d', false, false, null),
-    BRIDGE('b', false, false, null),
+    // structures
+    BRIDGE('b', Layer.STRUCTURE, false),
+    CLOSED_DOOR('D', Layer.STRUCTURE, true),
+    OPEN_DOOR('d', Layer.STRUCTURE, false),
 
-    // Items
-    AXE('a', false, true, "tool"),
-    CYAN_POTION('c', false, true, "drink"),
-    HEART_POTION('h', false, true, "drink"),
-    KEY('k', false, true, "artifact"),
+    // items
+    AXE('a', Layer.ITEM, false),
+    CYAN_POTION('c', Layer.ITEM, false),
+    HEART_POTION('h', Layer.ITEM, false),
+    KEY('k', Layer.ITEM, false),
 
-    PLAYER_0('0', true, false, null), // '0' to '9' for players 1 to 10
-    PLAYER_1('1', true, false, null),
-    PLAYER_2('2', true, false, null),
-    PLAYER_3('3', true, false, null),
-    PLAYER_4('4', true, false, null),
-    PLAYER_5('5', true, false, null),
-    PLAYER_6('6', true, false, null),
-    PLAYER_7('7', true, false, null),
-    PLAYER_8('8', true, false, null),
-    PLAYER_9('9', true, false, null),
-
-    UNKNOWN(' ', true, false, null);
+    // players
+    PLAYER0('0', Layer.CHARACTER, true),
+    PLAYER1('1', Layer.CHARACTER, true),
+    PLAYER2('2', Layer.CHARACTER, true),
+    PLAYER3('3', Layer.CHARACTER, true),
+    PLAYER4('4', Layer.CHARACTER, true),
+    PLAYER5('5', Layer.CHARACTER, true),
+    PLAYER6('6', Layer.CHARACTER, true),
+    PLAYER7('7', Layer.CHARACTER, true),
+    PLAYER8('8', Layer.CHARACTER, true),
+    PLAYER9('9', Layer.CHARACTER, true);
 
     public final char code;
+    public final Layer layer;
     public final boolean blocking;
-    public final boolean moveable;
-    public final String itemClass;
 
-    TileType(char code, boolean blocking, boolean moveable, String itemClass) {
+    TileType(char code, Layer layer, boolean blocking) {
         this.code = code;
+        this.layer = layer;
         this.blocking = blocking;
-        this.moveable = moveable;
-        this.itemClass = itemClass;
     }
 
-    public static TileType fromChar(char c) {
-        for (TileType t : values()) {
-            if (t.code == c) return t;
+    public static TileType fromCode(char code) {
+        for (TileType type : values()) {
+            if (type.code == code) {
+                return type;
+            }
         }
-        return UNKNOWN;
+        return null;
     }
 }

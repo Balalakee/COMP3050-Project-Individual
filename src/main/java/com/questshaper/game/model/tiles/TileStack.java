@@ -1,68 +1,83 @@
 package com.questshaper.game.model.tiles;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 public class TileStack {
-    private final List<Tile> layers = new ArrayList<>();
 
-    public void add(Tile tile) {
-        layers.removeIf(t -> t.getLayer() == tile.getLayer()); // ensure only one tile per layer
-        layers.add(tile);
-    }
+    private final List<Tile> layers =
+            new ArrayList<>();
 
     public List<Tile> getLayers() {
         return layers;
     }
 
-    public Tile getByLayer(TileLayer layer) {
+    public void add(Tile tile) {
+
+        removeLayer(tile.getLayer());
+
+        layers.add(tile);
+
+        layers.sort(
+                Comparator.comparingInt(
+                        t -> t.getLayer().ordinal()
+                )
+        );
+    }
+
+    public void removeLayer(
+            Layer layer) {
+
+        layers.removeIf(
+                t -> t.getLayer() == layer
+        );
+    }
+
+    public Tile getLayer(
+            Layer layer) {
+
         for (Tile t : layers) {
-            if (t.getLayer() == layer) return t;
+
+            if (t.getLayer() == layer) {
+                return t;
+            }
         }
+
         return null;
     }
 
-    public void removeLayer(TileLayer layer) {
-    layers.removeIf(t -> t.getLayer() == layer);
-}
+    public boolean isBlocking() {
 
-    public boolean isBlockingStack() {
-
-    Tile structure = null;
-    Tile floor = null;
-
-    for (Tile t : layers) {
-
-        if (t.getLayer() ==
-            TileLayer.STRUCTURE) {
-
-            structure = t;
-        }
-
-        if (t.getLayer() ==
-            TileLayer.FLOOR) {
-
-            floor = t;
-        }
-    }
-
-    // structures override floor
+    Tile structure = getLayer(Layer.STRUCTURE);
 
     if (structure != null) {
-        return structure.isBlockingTile();
+        return structure.isBlocking();
     }
 
-    return floor != null &&
-           floor.isBlockingTile();
-}
-    public TileStack copy() {
+    Tile floor = getLayer(Layer.FLOOR);
 
-    TileStack clone = new TileStack();
-
-    for (Tile tile : layers) {
-        clone.add(tile);
+    if (floor != null) {
+        return floor.isBlocking();
     }
 
-    return clone;
+    return false;
 }
+
+    public boolean hasType(
+            TileType type) {
+
+        return layers.stream()
+                .anyMatch(
+                        t -> t.getType() == type
+                );
+    }
+
+    public void removeType(
+            TileType type) {
+
+        layers.removeIf(
+                t -> t.getType() == type
+        );
+    }
 }

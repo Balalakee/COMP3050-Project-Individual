@@ -1,0 +1,51 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: comp3050-project-server:local
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    networks:
+      - comp3050
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - comp3050
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - comp3050
+
+  loki:
+    image: grafana/loki:latest
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+    networks:
+      - comp3050
+
+  promtail:
+    image: grafana/promtail:latest
+    volumes:
+      - ./promtail/config.yml:/etc/promtail/config.yml
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - comp3050
+
+networks:
+  comp3050:
+    driver: bridge

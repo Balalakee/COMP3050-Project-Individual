@@ -1,112 +1,147 @@
 package com.questshaper.game.service;
 
-import com.questshaper.game.model.GameMap;
-import com.questshaper.game.model.Player;
-import com.questshaper.game.model.tiles.Tile;
-import com.questshaper.game.model.tiles.TileLayer;
-import com.questshaper.game.model.tiles.TileStack;
-import com.questshaper.game.util.MapLoader;
+import com.questshaper.game.model.tiles.*;
 import com.questshaper.game.util.TileEncoder;
 
-import java.util.Collection;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import com.questshaper.game.util.MapLoader;
 
-import org.springframework.stereotype.Service;
-
-@Service
 public class MapService {
 
-    private final GameMap map;
+    private final TileStack[][] map;
+    private final int height;
+    private final int width;
 
     public MapService() {
-        String[][] data = MapLoader.loadMap("map.txt");
-        map = new GameMap(data.length, data[0].length);
-        map.createMap(data);
+    String[][] mapData =
+            MapLoader.loadDefaultMap();
+
+    this.height = mapData.length;
+    this.width = mapData[0].length;
+    this.map = new TileStack[height][width];
+
+    for (int y = 0; y < height; y++) {
+        if (mapData[y].length != width) {
+            throw new RuntimeException("Map rows must all have the same width.");
+        }
+
+        for (int x = 0; x < width; x++) {
+            this.map[y][x] = decode(mapData[y][x]);
+        }
     }
+}
 
     public int getHeight() {
-        return map.getHeight();
+        return height;
     }
 
     public int getWidth() {
-        return map.getWidth();
+        return width;
+    }
+
+    public int wrapX(int x) {
+        int wrapped = x % width;
+        if (wrapped < 0) wrapped += width;
+        return wrapped;
+    }
+
+    public boolean isYInBounds(int y) {
+        return y >= 0 && y < height;
     }
 
     public TileStack getStack(int y, int x) {
-        return map.getStack(y, x);
+        if (!isYInBounds(y)) return null;
+        return map[y][wrapX(x)];
     }
 
- public String[][] getWindow(int centerY, int centerX, int size) {
-
-    String[][] window = new String[size][size];
-
-    int half = size / 2;
-    int width = getWidth();
-    int height = getHeight();
-
-    for (int wy = 0; wy < size; wy++) {
-
-        int mapY = centerY - half + wy;
-
-        // Y does NOT wrap
-        if (mapY < 0 || mapY >= height) {
-            for (int wx = 0; wx < size; wx++) {
-                window[wy][wx] = " ";
-            }
-            continue;
-        }
-
-        for (int wx = 0; wx < size; wx++) {
-
-            int mapX = centerX - half + wx;
-
-            // X WRAPS
-            while (mapX < 0) {
-                mapX += width;
-            }
-
-            while (mapX >= width) {
-                mapX -= width;
-            }
-
-            TileStack stack = getStack(mapY, mapX);
-
-            window[wy][wx] =
-                    TileEncoder.encode(stack);
-        }
+    public String getEncodedTileForView(int y, int x) {
+        if (!isYInBounds(y)) return " ";
+        return TileEncoder.encode(getStack(y, x));
     }
-
-    return window;
-}
-
-public Tile getItem(int y, int x) {
-
-    TileStack stack = getStack(y, x);
-
-    if (stack == null) return null;
-
-    return stack.getByLayer(TileLayer.ITEM);
-}
-
-public void removeItem(int y, int x) {
-
-    TileStack stack = getStack(y, x);
-
-    if (stack != null) {
-        stack.removeLayer(TileLayer.ITEM);
-    }
-}
-
-public void placeItem(int y, int x, Tile item) {
-
-    TileStack stack = getStack(y, x);
-
-    if (stack != null) {
-        stack.add(item);
-    }
-}
 
     public boolean isBlocked(int y, int x) {
-        TileStack stack = map.getStackSafe(y, x);
-        return stack.isBlockingStack();
+        TileStack stack = getStack(y, x);
+        return stack == null || stack.isBlocking();
+    }
+
+    public String[][] getWindow(int centerY, int centerX, int size) {
+        String[][] window = new String[size][size];
+        int half = size / 2;
+
+        for (int wy = 0; wy < size; wy++) {
+            int mapY = centerY - half + wy;
+
+            for (int wx = 0; wx < size; wx++) {
+                int mapX = centerX - half + wx;
+                window[wy][wx] = getEncodedTileForView(mapY, mapX);
+            }
+        }
+
+        return window;
+    }
+
+    public Tile getItem(int y, int x) {
+        TileStack stack = getStack(y, x);
+        if (stack == null) return null;
+        return stack.getLayer(Layer.ITEM);
+    }
+
+    public void removeItem(int y, int x) {
+        TileStack stack = getStack(y, x);
+        if (stack != null) {
+            stack.removeLayer(Layer.ITEM);
+        }
+    }
+
+    public boolean placeItem(int y, int x, TileType itemType) {
+        TileStack stack = getStack(y, x);
+        if (stack == null) return false;
+
+        if (stack.getLayer(Layer.ITEM) != null) {
+            return false;
+        }
+
+        stack.add(new Tile(itemType));
+        return true;
+    }
+
+    public boolean toggleDoor(int y, int x) {
+        TileStack stack = getStack(y, x);
+        if (stack == null) return false;
+
+        Tile structure = stack.getLayer(Layer.STRUCTURE);
+        if (structure == null) return false;
+
+        if (structure.getType() == TileType.CLOSED_DOOR) {
+            stack.add(new Tile(TileType.OPEN_DOOR));
+            return true;
+        }
+
+        if (structure.getType() == TileType.OPEN_DOOR) {
+            stack.add(new Tile(TileType.CLOSED_DOOR));
+            return true;
+        }
+
+        return false;
+    }
+
+    private TileStack decode(String code) {
+        TileStack stack = new TileStack();
+
+        for (char c : code.toCharArray()) {
+            TileType type = TileType.fromCode(c);
+            if (type != null) {
+                stack.add(new Tile(type));
+            }
+        }
+
+        if (stack.getLayer(Layer.FLOOR) == null) {
+            stack.add(new Tile(TileType.GRASS));
+        }
+
+        return stack;
     }
 }

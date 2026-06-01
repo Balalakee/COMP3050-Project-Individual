@@ -1,451 +1,467 @@
 package com.questshaper.game.service;
 
+import com.questshaper.game.model.Account;
 import com.questshaper.game.model.Player;
-import com.questshaper.game.model.PlayerCredentials;
 import com.questshaper.game.model.tiles.Tile;
-import com.questshaper.game.model.tiles.TileLayer;
-import com.questshaper.game.model.tiles.TileStack;
 import com.questshaper.game.model.tiles.TileType;
+import com.questshaper.game.util.JsonUtil;
+import com.questshaper.game.util.EnvUserLoader;
 
-import org.springframework.stereotype.Service;
-
-import java.util.HashMap;
-import java.util.HashSet;
+import java.io.IOException;
+import java.security.MessageDigest;
+import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
-@Service
 public class GameService {
 
-    private final Map<String, Player> sessions = new HashMap<>();
+    private static final int VIEW_SIZE = 11;
+    private static final int VIEW_RADIUS = VIEW_SIZE / 2;
+
     private final MapService mapService;
 
-    private final Map<String, PlayerCredentials> accounts =
-        new HashMap<>();
+    // username -> account loaded from GAME_USERS
+    private final Map<String, Account> accounts =
+            new LinkedHashMap<>();
 
-private final Set<Character> usedAvatars =
-        new HashSet<>();
+    // session token -> player
+    private final Map<String, Player> sessions =
+            new LinkedHashMap<>();
 
-    public GameService(MapService mapService) {
-        this.mapService = mapService;
+    public GameService() throws IOException {
+        this.mapService = new MapService();
+
+        this.accounts.putAll(
+                EnvUserLoader.loadUsers()
+        );
+
+        System.out.println(
+                "Loaded " + accounts.size() +
+                " account(s) from GAME_USERS"
+        );
     }
 
-    public String login(
-        String username,
-        String encPassword) {
-
-    if (username == null ||
-        encPassword == null ||
-        username.isBlank() ||
-        encPassword.isBlank()) {
-        return null;
+    public MapService getMapService() {
+        return mapService;
     }
 
-    PlayerCredentials acc =
-            accounts.get(username);
+    public static boolean isValidPlayerName(String name) {
+        return name != null && name.matches("[A-Za-z-]+");
+    }
 
-    // Existing user
-    if (acc != null) {
+    public static String hashPassword(String name, String password) {
+        try {
+            MessageDigest digest =
+                    MessageDigest.getInstance("SHA-256");
 
-        // Wrong password
-        if (!acc.getEncPassword()
-                .equals(encPassword)) {
+            byte[] hash =
+                    digest.digest(
+                            (name + ";" + password)
+                                    .getBytes(StandardCharsets.UTF_8)
+                    );
+
+            StringBuilder out =
+                    new StringBuilder();
+
+            for (byte b : hash) {
+                out.append(
+                        String.format("%02x", b)
+                );
+            }
+
+            return out.toString();
+
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    public synchronized String login(
+            String name,
+            String encpswrd) {
+
+        if (!isValidPlayerName(name) ||
+            encpswrd == null ||
+            encpswrd.isBlank()) {
+
             return null;
         }
 
-        // Already logged in
+        Account account =
+                accounts.get(name);
+
+        if (account == null) {
+            return null;
+        }
+
+        if (!account.getEncryptedPassword()
+                .equals(encpswrd)) {
+
+            return null;
+        }
+
+        // Do not allow same account online twice.
         if (sessions.containsValue(
-                acc.getPlayer())) {
+                account.getPlayer())) {
+
             return null;
         }
 
-        String session =
+        String token =
                 UUID.randomUUID()
                         .toString()
                         .replace("-", "");
 
         sessions.put(
-                session,
-                acc.getPlayer());
+                token,
+                account.getPlayer()
+        );
 
-        return session;
+        System.out.println(
+                "LOGIN success: " +
+                name +
+                " avatar=" +
+                account.getPlayer().getAvatar()
+        );
+
+        return token;
     }
 
-    // New account
-    Character avatar =
-            getNextAvatar();
+    public synchronized boolean logout(
+            String token) {
 
-    if (avatar == null) {
-        return null;
+        if (token == null || token.isBlank()) {
+            return false;
+        }
+
+        Player removed =
+                sessions.remove(token);
+
+        if (removed != null) {
+            System.out.println(
+                    "LOGOUT success: " +
+                    removed.getUsername()
+            );
+        }
+
+        return removed != null;
     }
 
-    Player player =
-            new Player(
-                    username,
-                    5,
-                    5,
-                    avatar);
+    public synchronized Player getPlayer(
+            String token) {
 
-    PlayerCredentials newAcc =
-            new PlayerCredentials(
-                    username,
-                    encPassword,
-                    player);
+        if (token == null) {
+            return null;
+        }
 
-    accounts.put(
-            username,
-            newAcc);
-
-    String session =
-            UUID.randomUUID()
-                    .toString()
-                    .replace("-", "");
-
-    sessions.put(
-            session,
-            player);
-
-    return session;
-}
-
-    public boolean isValidSession(String sessionId) {
-        return sessions.containsKey(sessionId);
+        return sessions.get(token);
     }
 
-    public boolean logout(
-        String sessionId) {
-
-    Player player =
-            sessions.remove(sessionId);
-
-    return player != null;
-}
-
-    public Player getPlayer(String sessionId) {
-        return sessions.get(sessionId);
-    }
-
-    public boolean move(String sessionId, int dy, int dx) {
-
-        Player player = sessions.get(sessionId);
+    public synchronized boolean move(
+            Player player,
+            int dy,
+            int dx) {
 
         if (player == null) {
             return false;
         }
 
-        // only cardinal movement
-
-        if (Math.abs(dy) + Math.abs(dx) != 1) {
+        if (!isValidRelativeStep(dy, dx)) {
             return false;
         }
 
-        int newY = player.getY() + dy;
-        int newX = player.getX() + dx;
-
-        int width = mapService.getWidth();
-
-        // wrap X
-
-        if (newX < 0) {
-            newX = width - 1;
+        if (dy == 0 && dx == 0) {
+            return true;
         }
 
-        if (newX >= width) {
-            newX = 0;
-        }
+        int newY =
+                player.getY() + dy;
 
-        // clamp Y
+        int newX =
+                mapService.wrapX(
+                        player.getX() + dx
+                );
 
-        if (newY < 0 || newY >= mapService.getHeight()) {
+        if (mapService.isBlocked(newY, newX)) {
             return false;
         }
 
-        // terrain collision
-
-        if (mapService.isBlocked(newY,newX)
-        || playerBlocking(
-                newY,
-                newX,
-                player)) {
-
-    return false;
-}
-
-        // player collision
-
-        for (Player other : sessions.values()) {
-
-            if (other == player) {
-                continue;
-            }
-
-            if (other.getY() == newY &&
-                other.getX() == newX) {
-
-                return false;
-            }
+        if (isPlayerAt(newY, newX, player)) {
+            return false;
         }
 
         player.setPosition(newY, newX);
 
-        System.out.println(
-                "MOVE " + player.getUsername() +
-                " -> (" + newY + "," + newX + ")"
+        return true;
+    }
+
+    public synchronized String infoJson(
+            Player player,
+            int requestedY,
+            int requestedX) {
+
+        if (player == null) {
+            return null;
+        }
+
+        // Server is source of truth.
+        // This also resyncs the client if it moved before login/logout.
+        int y = player.getY();
+        int x = player.getX();
+
+        int top =
+                y - VIEW_RADIUS;
+
+        int left =
+                x - VIEW_RADIUS;
+
+        int bottom =
+                y + VIEW_RADIUS;
+
+        int right =
+                x + VIEW_RADIUS;
+
+        String[][] info =
+                buildInfoWindow(y, x);
+
+        StringBuilder json =
+                new StringBuilder();
+
+        json.append("{");
+        json.append("\"y\":").append(y).append(",");
+        json.append("\"x\":").append(x).append(",");
+        json.append("\"top\":").append(top).append(",");
+        json.append("\"left\":").append(left).append(",");
+        json.append("\"bottom\":").append(bottom).append(",");
+        json.append("\"right\":").append(right).append(",");
+        json.append("\"info\":[");
+
+        for (int row = 0; row < info.length; row++) {
+
+            json.append("[");
+
+            for (int col = 0; col < info[row].length; col++) {
+
+                json.append(
+                        JsonUtil.quote(
+                                info[row][col]
+                        )
+                );
+
+                if (col < info[row].length - 1) {
+                    json.append(",");
+                }
+            }
+
+            json.append("]");
+
+            if (row < info.length - 1) {
+                json.append(",");
+            }
+        }
+
+        json.append("]}");
+
+        return json.toString();
+    }
+
+    public synchronized boolean take(
+            Player player) {
+
+        if (player == null) {
+            return false;
+        }
+
+        Tile item =
+                mapService.getItem(
+                        player.getY(),
+                        player.getX()
+                );
+
+        if (item == null ||
+            !isMovableItem(
+                    item.getType())) {
+
+            return false;
+        }
+
+        TileType previous =
+                player.takeItem(
+                        item.getType()
+                );
+
+        mapService.removeItem(
+                player.getY(),
+                player.getX()
         );
 
+        if (previous != null) {
+            mapService.placeItem(
+                    player.getY(),
+                    player.getX(),
+                    previous
+            );
+        }
+
         return true;
+    }
+
+    public synchronized boolean place(
+            Player player) {
+
+        if (player == null) {
+            return false;
+        }
+
+        TileType item =
+                player.itemToPlace();
+
+        if (item == null) {
+            return false;
+        }
+
+        if (!mapService.placeItem(
+                player.getY(),
+                player.getX(),
+                item)) {
+
+            return false;
+        }
+
+        player.removeItem(item);
+
+        return true;
+    }
+
+    public synchronized boolean use(
+            Player player,
+            int dy,
+            int dx) {
+
+        if (player == null) {
+            return false;
+        }
+
+        if (!isValidRelativeStep(dy, dx)) {
+            return false;
+        }
+
+        int y =
+                player.getY() + dy;
+
+        int x =
+                mapService.wrapX(
+                        player.getX() + dx
+                );
+
+        if (!mapService.isYInBounds(y)) {
+            return false;
+        }
+
+        return mapService.toggleDoor(y, x);
+    }
+
+    public synchronized boolean isBlockingForTests(
+            int y,
+            int x) {
+
+        return mapService.isBlocked(y, x);
     }
 
     private String[][] buildInfoWindow(
-        int centerY,
-        int centerX,
-        int size) {
+            int centerY,
+            int centerX) {
 
-    String[][] window =
-            mapService.getWindow(centerY, centerX, size);
+        String[][] window =
+                mapService.getWindow(
+                        centerY,
+                        centerX,
+                        VIEW_SIZE
+                );
 
-    int half = size / 2;
-    int width = mapService.getWidth();
+        int top =
+                centerY - VIEW_RADIUS;
 
-    // Overlay active players
-    for (Player p : sessions.values()) {
+        int left =
+                centerX - VIEW_RADIUS;
 
-    int relY =
-            p.getY() - (centerY - half);
+        for (Player p : sessions.values()) {
 
-    int relX =
-            p.getX() - (centerX - half);
+            int relY =
+                    p.getY() - top;
 
-    while (relX < 0) {
-        relX += width;
-    }
+            int relX =
+                    p.getX() - left;
 
-    while (relX >= width) {
-        relX -= width;
-    }
+            while (relX < 0) {
+                relX += mapService.getWidth();
+            }
 
-    if (relY >= 0 &&
-        relY < size &&
-        relX >= 0 &&
-        relX < size) {
+            while (relX >= mapService.getWidth()) {
+                relX -= mapService.getWidth();
+            }
 
-        String tile =
-                window[relY][relX];
+            if (relY >= 0 &&
+                relY < VIEW_SIZE &&
+                relX >= 0 &&
+                relX < VIEW_SIZE) {
 
-        if (tile == null)
-            tile = "g";
+                String tile =
+                        window[relY][relX];
 
-        tile =
-                tile.replaceAll("[0-9]", "");
+                if (tile == null || tile.isBlank()) {
+                    tile = "g";
+                }
 
-        window[relY][relX] =
-                tile + p.getAvatar();
-    }
-}
-
-    return window;
-}
-
-    public Map<String,Object> getInfo(
-        String sessionId,
-        int y,
-        int x) {
-
-    Player player =
-            sessions.get(sessionId);
-
-    if (player == null) {
-        return null;
-    }
-
-    // Always return player's REAL location
-
-    int size = 11;
-    int half = 5;
-
-    int top =
-            player.getY() - half;
-
-    int bottom =
-            player.getY() + half;
-
-    int left =
-            player.getX() - half;
-
-    int right =
-            player.getX() + half;
-
-    String[][] info =
-            buildInfoWindow(
-                    player.getY(),
-                    player.getX(),
-                    size);
-
-    Map<String,Object> result =
-            new HashMap<>();
-
-    result.put("x", player.getX());
-    result.put("y", player.getY());
-
-    result.put("top", top);
-    result.put("left", left);
-    result.put("bottom", bottom);
-    result.put("right", right);
-
-    result.put("info", info);
-
-    return result;
-}
-
-    public boolean take(String sessionId) {
-
-    Player p = sessions.get(sessionId);
-
-    if (p == null) return false;
-
-    Tile item = mapService.getItem(p.getY(), p.getX());
-
-    if (item == null) return false;
-
-    if (!item.getType().moveable) return false;
-
-    // swap same class
-    for (int i = 0; i < p.getInventory().size(); i++) {
-
-        TileType inv = p.getInventory().get(i);
-
-        if (inv.itemClass != null &&
-            inv.itemClass.equals(item.getType().itemClass)) {
-
-            p.getInventory().set(i, item.getType());
-
-            mapService.removeItem(p.getY(), p.getX());
-            mapService.placeItem(
-                p.getY(),
-                p.getX(),
-                new Tile(inv, TileLayer.ITEM)
-            );
-
-            return true;
+                window[relY][relX] =
+                        tile.replaceAll("[0-9]", "")
+                                + p.getAvatar();
+            }
         }
+
+        return window;
     }
 
-    p.getInventory().add(item.getType());
-    mapService.removeItem(p.getY(), p.getX());
+    private boolean isPlayerAt(
+            int y,
+            int x,
+            Player excluded) {
 
-    return true;
-}
+        for (Player p : sessions.values()) {
 
-public boolean place(String sessionId) {
+            if (p == excluded) {
+                continue;
+            }
 
-    Player p = sessions.get(sessionId);
+            if (p.getY() == y &&
+                p.getX() == x) {
 
-    if (p == null) return false;
+                return true;
+            }
+        }
 
-    if (p.getInventory().isEmpty()) {
         return false;
     }
 
-    Tile existing = mapService.getItem(p.getY(), p.getX());
+    private boolean isMovableItem(
+            TileType type) {
 
-    if (existing != null) {
-        return false;
+        return switch (type) {
+            case AXE,
+                 CYAN_POTION,
+                 HEART_POTION,
+                 KEY -> true;
+            default -> false;
+        };
     }
 
-    TileType item = p.getInventory().remove(0);
+    private boolean isValidRelativeStep(
+            int dy,
+            int dx) {
 
-    mapService.placeItem(
-        p.getY(),
-        p.getX(),
-        new Tile(item, TileLayer.ITEM)
-    );
-
-    return true;
-}
-
-public boolean use(String sessionId, int dy, int dx) {
-
-    Player p = sessions.get(sessionId);
-
-    if (p == null) return false;
-
-    if (Math.abs(dy) + Math.abs(dx) > 1) {
-        return false;
+        return Math.abs(dy) <= 1 &&
+               Math.abs(dx) <= 1 &&
+               Math.abs(dy) + Math.abs(dx) <= 1;
     }
-
-    int y = p.getY() + dy;
-    int x = p.getX() + dx;
-
-    TileStack stack = mapService.getStack(y, x);
-
-    if (stack == null) return false;
-
-    Tile structure =
-        stack.getByLayer(TileLayer.STRUCTURE);
-
-    if (structure == null) return false;
-
-    if (structure.getType() == TileType.DOOR) {
-
-        stack.add(
-            new Tile(
-                TileType.DOOR_OPEN,
-                TileLayer.STRUCTURE
-            )
-        );
-
-        return true;
-    }
-
-    if (structure.getType() == TileType.DOOR_OPEN) {
-
-        stack.add(
-            new Tile(
-                TileType.DOOR,
-                TileLayer.STRUCTURE
-            )
-        );
-
-        return true;
-    }
-
-    return false;
-}
-
-private boolean playerBlocking(
-        int y,
-        int x,
-        Player movingPlayer) {
-
-    for (Player p : sessions.values()) {
-
-        if (p == movingPlayer) {
-            continue;
-        }
-
-        if (p.getY() == y &&
-            p.getX() == x) {
-
-            return true;
-        }
-    }
-
-    return false;
-}
-
-private Character getNextAvatar() {
-
-    for (char c='0'; c<='9'; c++) {
-
-        if (!usedAvatars.contains(c)) {
-
-            usedAvatars.add(c);
-            return c;
-        }
-    }
-
-    return null;
-}
-
 }

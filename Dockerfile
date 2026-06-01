@@ -1,16 +1,21 @@
-# Use Maven to build the app
 FROM maven:3.9.9-eclipse-temurin-17 AS build
 
 WORKDIR /app
-COPY . .
 
-RUN mvn clean package -DskipTests
+COPY pom.xml .
+COPY src ./src
 
-# Run the app
-FROM eclipse-temurin:17-jdk-alpine
+RUN mvn -B -DskipTests clean package
+
+FROM eclipse-temurin:17-jre-alpine
+
+RUN rm -f /usr/bin/pebble
 
 WORKDIR /app
 
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build /app/target/comp3050-project-1.0-SNAPSHOT.jar app.jar
+COPY public ./public
+
+EXPOSE 8000
 
 CMD ["java", "-jar", "app.jar"]

@@ -1,4 +1,48 @@
+# Maven / build output
+
 target/
-.git/
+build/
+
+# IDE files
+
 .idea/
 .vscode/
+*.iml
+
+# OS files
+
+.DS_Store
+Thumbs.db
+
+# Git
+
+.git
+.gitignore
+
+# Environment / secrets
+
+.env
+
+# Terraform local state
+
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.backup
+infra/*.tfvars
+infra/*.tfvars.json
+
+# Logs
+
+*.log
+
+# Test output
+
+surefire-reports/
+
+# Node modules (if frontend tooling added later)
+
+node_modules/
+
+# Docker compose override files
+
+docker-compose.override.yml

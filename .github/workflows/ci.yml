@@ -1,0 +1,40 @@
+name: Java CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      GAME_USERS: ${{ secrets.GAME_USERS }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Run Maven tests
+        run: mvn -B test
+
+      - name: Scan code with Semgrep
+        run: |
+          pip3 install semgrep
+          semgrep --config semgrep/semgrep.yml src/main/java
+
+      - name: Build Docker image
+        run: docker build -t comp3050-assign2 .
+
+      - name: Scan Docker image with Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/refs/tags/v0.69.3/contrib/install.sh | sh -s -- -b /usr/local/bin v0.69.3
+          trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 comp3050-assign2

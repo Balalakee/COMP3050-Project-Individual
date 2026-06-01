@@ -1,0 +1,14 @@
+target/
+.env
+
+# Terraform
+infra/.terraform/
+infra/terraform.tfstate
+infra/terraform.tfstate.backup
+*.tfvars
+*.tfvars.json
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
