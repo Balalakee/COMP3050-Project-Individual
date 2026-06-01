@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: comp3050-project-server:local
+    image: balalakee/questshaper
     env_file:
       - .env
     ports:
