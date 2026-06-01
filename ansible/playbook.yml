@@ -1,0 +1,97 @@
+---
+- name: Deploy QuestShaper application stack to EC2
+  hosts: all
+  become: yes
+
+  vars:
+    repo_url: "https://github.com/Balalakee/COMP3050-Project-Individual"
+    deploy_dir: /opt/questshaper
+    branch: main
+
+  tasks:
+    - name: Install Docker and Git
+      dnf:
+        name:
+          - docker
+          - git
+        state: present
+
+    - name: Start and enable Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Install Docker Compose plugin
+      shell: |
+        mkdir -p /usr/local/lib/docker/cli-plugins
+        curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
+          -o /usr/local/lib/docker/cli-plugins/docker-compose
+        chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+      args:
+        creates: /usr/local/lib/docker/cli-plugins/docker-compose
+
+    - name: Verify Docker Compose plugin
+      command: docker compose version
+      changed_when: false
+
+    - name: Add ec2-user to docker group
+      user:
+        name: ec2-user
+        groups: docker
+        append: yes
+
+    - name: Create deploy directory
+      file:
+        path: "{{ deploy_dir }}"
+        state: directory
+        owner: ec2-user
+        group: ec2-user
+        mode: "0755"
+
+    - name: Check if deploy directory is a git repository
+      stat:
+        path: "{{ deploy_dir }}/.git"
+      register: deploy_git_dir
+
+    - name: Remove existing non-git deploy directory
+      file:
+        path: "{{ deploy_dir }}"
+        state: absent
+      when: not deploy_git_dir.stat.exists
+
+    - name: Recreate deploy directory
+      file:
+        path: "{{ deploy_dir }}"
+        state: directory
+        owner: ec2-user
+        group: ec2-user
+        mode: "0755"
+      when: not deploy_git_dir.stat.exists
+
+    - name: Clone or update project repository
+      git:
+        repo: "{{ repo_url }}"
+        dest: "{{ deploy_dir }}"
+        version: "{{ branch }}"
+        force: yes
+      become_user: ec2-user
+
+    - name: Write environment file
+      copy:
+        dest: "{{ deploy_dir }}/.env"
+        owner: ec2-user
+        group: ec2-user
+        mode: "0600"
+        content: |
+          GAME_USERS={{ game_users }}
+
+    - name: Pull all container images
+      command: docker compose pull
+      args:
+        chdir: "{{ deploy_dir }}"
+
+    - name: Start the stack
+      command: docker compose up -d --build
+      args:
+        chdir: "{{ deploy_dir }}"
